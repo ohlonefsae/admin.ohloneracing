@@ -1,6 +1,4 @@
-// functions/[slug].js — renders a published page
-import { marked } from 'https://cdn.jsdelivr.net/npm/marked@15/+esm';
-
+// functions/[slug].js — renders a published page (no external dependencies)
 export async function onRequestGet(context) {
   const { env, params } = context;
   const slug = params.slug;
@@ -15,7 +13,8 @@ export async function onRequestGet(context) {
     return new Response('Page not found', { status: 404 });
   }
 
-  const html = marked.parse(page.content_md || '');
+  // Simple Markdown → HTML (covers headings, bold, italic, links, paragraphs, lists)
+  const html = simpleMarkdown(page.content_md || '');
 
   const fullPage = `<!DOCTYPE html>
 <html lang="en">
@@ -46,6 +45,24 @@ export async function onRequestGet(context) {
   return new Response(fullPage, {
     headers: { 'Content-Type': 'text/html; charset=utf-8' },
   });
+}
+
+function simpleMarkdown(md) {
+  let html = escapeHtml(md);
+  // Headings
+  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+  // Bold / italic
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  // Links
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-renegade-gold underline">$1</a>');
+  // Line breaks → paragraphs
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = '<p>' + html + '</p>';
+  html = html.replace(/<p><\/p>/g, '');
+  return html;
 }
 
 function escapeHtml(str) {
