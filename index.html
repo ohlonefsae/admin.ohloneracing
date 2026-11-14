@@ -31,15 +31,13 @@
   </script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     .EasyMDEContainer .CodeMirror { min-height: 320px; font-size: 15px; }
-    .editor-preview, .editor-preview-side { background: #fafaf9; }
   </style>
 </head>
 <body class="bg-stone-100 text-stone-900 font-sans min-h-screen">
 
-  <!-- LOGIN SCREEN -->
+  <!-- LOGIN -->
   <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-stone-200 p-8">
       <div class="text-center mb-6">
@@ -64,17 +62,14 @@
         </button>
         <p id="login-error" class="text-red-600 text-sm text-center hidden">Incorrect password</p>
       </form>
-      <p class="text-center text-xs text-stone-400 mt-6">Demo password: <code class="bg-stone-100 px-1 rounded">renegades2026</code></p>
     </div>
   </div>
 
-  <!-- DASHBOARD (hidden until login) -->
+  <!-- DASHBOARD -->
   <div id="dashboard" class="hidden">
     <header class="bg-renegade-green text-white border-b border-renegade-gold/30">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <span class="font-display font-black text-xl uppercase tracking-wider">Renegades <span class="text-renegade-gold">Admin</span></span>
-        </div>
+        <span class="font-display font-black text-xl uppercase tracking-wider">Renegades <span class="text-renegade-gold">Admin</span></span>
         <button id="logout-btn" class="text-xs font-semibold uppercase tracking-wider text-stone-300 hover:text-white">Log Out</button>
       </div>
     </header>
@@ -88,10 +83,8 @@
         </button>
       </div>
 
-      <!-- Pages List -->
       <div id="pages-list" class="space-y-3 mb-10"></div>
 
-      <!-- Editor Panel -->
       <div id="editor-panel" class="hidden bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
         <div class="flex items-center justify-between mb-4">
           <h3 id="editor-title" class="font-display font-bold text-xl uppercase text-renegade-green">New Page</h3>
@@ -131,69 +124,52 @@
   </div>
 
   <script>
-    // ── Config ──────────────────────────────────────────────────────────
-    const DEMO_PASSWORD = 'renegades2026';
-    const STORAGE_KEY = 'renegades_pages_v1';
-
-    // ── State ───────────────────────────────────────────────────────────
-    let pages = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const API = '/api'; // change if admin is on a different origin
+    let pages = [];
     let editingId = null;
     let easyMDE = null;
 
-    // ── DOM ─────────────────────────────────────────────────────────────
     const loginScreen = document.getElementById('login-screen');
     const dashboard = document.getElementById('dashboard');
-    const loginForm = document.getElementById('login-form');
-    const loginError = document.getElementById('login-error');
     const pagesList = document.getElementById('pages-list');
     const editorPanel = document.getElementById('editor-panel');
-
-    // ── Auth ────────────────────────────────────────────────────────────
-    function isLoggedIn() {
-      return sessionStorage.getItem('admin_auth') === 'true';
-    }
 
     function showDashboard() {
       loginScreen.classList.add('hidden');
       dashboard.classList.remove('hidden');
-      renderPagesList();
+      loadPages();
     }
 
-    loginForm.addEventListener('submit', (e) => {
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const pw = document.getElementById('password').value;
-      if (pw === DEMO_PASSWORD) {
-        sessionStorage.setItem('admin_auth', 'true');
+      const password = document.getElementById('password').value;
+      const res = await fetch(`${API}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+        credentials: 'include',
+      });
+      if (res.ok) {
         showDashboard();
       } else {
-        loginError.classList.remove('hidden');
+        document.getElementById('login-error').classList.remove('hidden');
       }
     });
 
     document.getElementById('logout-btn').addEventListener('click', () => {
-      sessionStorage.removeItem('admin_auth');
+      document.cookie = 'admin_token=; Path=/; Max-Age=0';
       location.reload();
     });
 
-    // ── Markdown Editor ─────────────────────────────────────────────────
-    function initEditor() {
-      if (easyMDE) easyMDE.toTextArea();
-      easyMDE = new EasyMDE({
-        element: document.getElementById('markdown-editor'),
-        spellChecker: false,
-        autosave: { enabled: false },
-        toolbar: ['bold', 'italic', 'heading', '|', 'quote', 'unordered-list', 'ordered-list', '|', 'link', 'image', '|', 'preview', 'side-by-side', 'fullscreen'],
-        status: false,
-      });
-    }
-
-    // ── Pages CRUD (localStorage for now — swap with API later) ─────────
-    function savePages() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(pages));
+    async function loadPages() {
+      const res = await fetch(`${API}/pages`, { credentials: 'include' });
+      if (!res.ok) return;
+      pages = await res.json();
+      renderPagesList();
     }
 
     function renderPagesList() {
-      if (pages.length === 0) {
+      if (!pages.length) {
         pagesList.innerHTML = `<p class="text-stone-500 text-sm">No pages yet. Click “New Page” to create one.</p>`;
         return;
       }
@@ -201,11 +177,21 @@
         <div class="bg-white rounded-xl border border-stone-200 p-4 flex items-center justify-between gap-4">
           <div>
             <div class="font-display font-bold text-lg text-renegade-green">${escapeHtml(p.title || 'Untitled')}</div>
-            <div class="text-xs text-stone-500">/${escapeHtml(p.slug || '')} · ${p.published ? '<span class="text-green-600">Published</span>' : '<span class="text-amber-600">Draft</span>'} ${p.showInNav ? '· In Nav' : ''}</div>
+            <div class="text-xs text-stone-500">/${escapeHtml(p.slug || '')} · ${p.published ? '<span class="text-green-600">Published</span>' : '<span class="text-amber-600">Draft</span>'} ${p.show_in_nav ? '· In Nav' : ''}</div>
           </div>
           <button onclick="editPage('${p.id}')" class="text-xs font-semibold uppercase tracking-wider text-renegade-gold hover:underline">Edit</button>
         </div>
       `).join('');
+    }
+
+    function initEditor() {
+      if (easyMDE) easyMDE.toTextArea();
+      easyMDE = new EasyMDE({
+        element: document.getElementById('markdown-editor'),
+        spellChecker: false,
+        toolbar: ['bold', 'italic', 'heading', '|', 'quote', 'unordered-list', 'ordered-list', '|', 'link', 'image', '|', 'preview', 'side-by-side', 'fullscreen'],
+        status: false,
+      });
     }
 
     function openEditor(page = null) {
@@ -213,16 +199,16 @@
       document.getElementById('editor-title').textContent = page ? 'Edit Page' : 'New Page';
       document.getElementById('page-title').value = page?.title || '';
       document.getElementById('page-slug').value = page?.slug || '';
-      document.getElementById('show-in-nav').checked = !!page?.showInNav;
+      document.getElementById('show-in-nav').checked = !!page?.show_in_nav;
       document.getElementById('delete-btn').classList.toggle('hidden', !page);
-
       editorPanel.classList.remove('hidden');
       initEditor();
-      if (easyMDE) easyMDE.value(page?.content || '');
+      if (easyMDE) easyMDE.value(page?.content_md || '');
       editorPanel.scrollIntoView({ behavior: 'smooth' });
     }
 
-    window.editPage = (id) => {
+    window.editPage = async (id) => {
+      // For simplicity we re-fetch full content; extend API if needed
       const page = pages.find(p => p.id === id);
       if (page) openEditor(page);
     };
@@ -237,52 +223,58 @@
       return {
         title: document.getElementById('page-title').value.trim(),
         slug: document.getElementById('page-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'),
-        content: easyMDE ? easyMDE.value() : '',
-        showInNav: document.getElementById('show-in-nav').checked,
+        content_md: easyMDE ? easyMDE.value() : '',
+        show_in_nav: document.getElementById('show-in-nav').checked,
       };
     }
 
-    document.getElementById('save-draft-btn').addEventListener('click', () => savePage(false));
-    document.getElementById('publish-btn').addEventListener('click', () => savePage(true));
-
-    function savePage(published) {
+    async function savePage(published) {
       const data = getFormData();
       if (!data.title || !data.slug) {
         alert('Title and slug are required.');
         return;
       }
-      if (editingId) {
-        const idx = pages.findIndex(p => p.id === editingId);
-        pages[idx] = { ...pages[idx], ...data, published, updatedAt: new Date().toISOString() };
+      data.published = published;
+
+      const method = editingId ? 'PUT' : 'POST';
+      const url = editingId ? `${API}/pages/${editingId}` : `${API}/pages`;
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+
+      if (res.ok) {
+        await loadPages();
+        editorPanel.classList.add('hidden');
+        if (easyMDE) easyMDE.toTextArea();
       } else {
-        pages.push({
-          id: crypto.randomUUID(),
-          ...data,
-          published,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
+        alert('Save failed');
       }
-      savePages();
-      renderPagesList();
-      editorPanel.classList.add('hidden');
-      if (easyMDE) easyMDE.toTextArea();
     }
 
-    document.getElementById('delete-btn').addEventListener('click', () => {
+    document.getElementById('save-draft-btn').addEventListener('click', () => savePage(false));
+    document.getElementById('publish-btn').addEventListener('click', () => savePage(true));
+
+    document.getElementById('delete-btn').addEventListener('click', async () => {
       if (!editingId || !confirm('Delete this page permanently?')) return;
-      pages = pages.filter(p => p.id !== editingId);
-      savePages();
-      renderPagesList();
-      editorPanel.classList.add('hidden');
+      const res = await fetch(`${API}/pages/${editingId}`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) {
+        await loadPages();
+        editorPanel.classList.add('hidden');
+      }
     });
 
     function escapeHtml(str) {
       return String(str).replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[m]));
     }
 
-    // ── Init ────────────────────────────────────────────────────────────
-    if (isLoggedIn()) showDashboard();
+    // Try to detect existing session
+    fetch(`${API}/pages`, { credentials: 'include' }).then(r => {
+      if (r.ok) showDashboard();
+    }).catch(() => {});
   </script>
 </body>
 </html>
