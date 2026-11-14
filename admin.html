@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Ohlone Renegades Racing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            renegade: {
+              green: '#0B2318',
+              greenMid: '#123525',
+              greenLight: '#1B4D36',
+              gold: '#F2A91E',
+              goldHover: '#D99212',
+            }
+          },
+          fontFamily: {
+            display: ['"Barlow Condensed"', 'sans-serif'],
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    .EasyMDEContainer .CodeMirror { min-height: 320px; font-size: 15px; }
+    .editor-preview, .editor-preview-side { background: #fafaf9; }
+  </style>
+</head>
+<body class="bg-stone-100 text-stone-900 font-sans min-h-screen">
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-stone-200 p-8">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center gap-2 mb-2">
+          <span class="w-8 h-0.5 bg-renegade-gold"></span>
+          <span class="font-display font-bold text-xs tracking-[0.25em] uppercase text-renegade-greenLight">Admin</span>
+          <span class="w-8 h-0.5 bg-renegade-gold"></span>
+        </div>
+        <h1 class="font-display font-black text-3xl uppercase text-renegade-green">Renegades</h1>
+        <p class="text-sm text-stone-500 mt-1">Page & Announcement Manager</p>
+      </div>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">Password</label>
+          <input type="password" id="password" required autocomplete="current-password"
+            class="w-full rounded-lg border border-stone-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-renegade-gold focus:border-transparent"
+            placeholder="Enter admin password" />
+        </div>
+        <button type="submit"
+          class="w-full rounded-lg bg-renegade-gold hover:bg-renegade-goldHover text-renegade-green font-display font-bold uppercase tracking-wider py-3 transition-all">
+          Log In
+        </button>
+        <p id="login-error" class="text-red-600 text-sm text-center hidden">Incorrect password</p>
+      </form>
+      <p class="text-center text-xs text-stone-400 mt-6">Demo password: <code class="bg-stone-100 px-1 rounded">renegades2026</code></p>
+    </div>
+  </div>
+
+  <!-- DASHBOARD (hidden until login) -->
+  <div id="dashboard" class="hidden">
+    <header class="bg-renegade-green text-white border-b border-renegade-gold/30">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="font-display font-black text-xl uppercase tracking-wider">Renegades <span class="text-renegade-gold">Admin</span></span>
+        </div>
+        <button id="logout-btn" class="text-xs font-semibold uppercase tracking-wider text-stone-300 hover:text-white">Log Out</button>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h2 class="font-display font-black text-3xl uppercase text-renegade-green">Pages & Announcements</h2>
+        <button id="new-page-btn"
+          class="rounded-lg bg-renegade-gold hover:bg-renegade-goldHover text-renegade-green font-display font-bold uppercase tracking-wider px-5 py-2.5">
+          + New Page
+        </button>
+      </div>
+
+      <!-- Pages List -->
+      <div id="pages-list" class="space-y-3 mb-10"></div>
+
+      <!-- Editor Panel -->
+      <div id="editor-panel" class="hidden bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 id="editor-title" class="font-display font-bold text-xl uppercase text-renegade-green">New Page</h3>
+          <button id="close-editor" class="text-stone-400 hover:text-stone-700 text-sm">Close</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">Title</label>
+            <input id="page-title" type="text" class="w-full rounded-lg border border-stone-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-renegade-gold" placeholder="Page title" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">URL Slug</label>
+            <input id="page-slug" type="text" class="w-full rounded-lg border border-stone-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-renegade-gold" placeholder="my-page-slug" />
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" id="show-in-nav" class="rounded text-renegade-gold focus:ring-renegade-gold" />
+            Show link in main site header & footer
+          </label>
+        </div>
+
+        <div class="mb-5">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-stone-500 mb-1">Content (Markdown)</label>
+          <textarea id="markdown-editor"></textarea>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <button id="save-draft-btn" class="rounded-lg border border-stone-300 hover:bg-stone-50 font-display font-bold uppercase tracking-wider px-5 py-2.5 text-sm">Save Draft</button>
+          <button id="publish-btn" class="rounded-lg bg-renegade-green hover:bg-renegade-greenLight text-white font-display font-bold uppercase tracking-wider px-5 py-2.5 text-sm">Publish</button>
+          <button id="delete-btn" class="rounded-lg text-red-600 hover:bg-red-50 font-display font-bold uppercase tracking-wider px-5 py-2.5 text-sm hidden">Delete</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ── Config ──────────────────────────────────────────────────────────
+    const DEMO_PASSWORD = 'renegades2026';
+    const STORAGE_KEY = 'renegades_pages_v1';
+
+    // ── State ───────────────────────────────────────────────────────────
+    let pages = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let editingId = null;
+    let easyMDE = null;
+
+    // ── DOM ─────────────────────────────────────────────────────────────
+    const loginScreen = document.getElementById('login-screen');
+    const dashboard = document.getElementById('dashboard');
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    const pagesList = document.getElementById('pages-list');
+    const editorPanel = document.getElementById('editor-panel');
+
+    // ── Auth ────────────────────────────────────────────────────────────
+    function isLoggedIn() {
+      return sessionStorage.getItem('admin_auth') === 'true';
+    }
+
+    function showDashboard() {
+      loginScreen.classList.add('hidden');
+      dashboard.classList.remove('hidden');
+      renderPagesList();
+    }
+
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const pw = document.getElementById('password').value;
+      if (pw === DEMO_PASSWORD) {
+        sessionStorage.setItem('admin_auth', 'true');
+        showDashboard();
+      } else {
+        loginError.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      sessionStorage.removeItem('admin_auth');
+      location.reload();
+    });
+
+    // ── Markdown Editor ─────────────────────────────────────────────────
+    function initEditor() {
+      if (easyMDE) easyMDE.toTextArea();
+      easyMDE = new EasyMDE({
+        element: document.getElementById('markdown-editor'),
+        spellChecker: false,
+        autosave: { enabled: false },
+        toolbar: ['bold', 'italic', 'heading', '|', 'quote', 'unordered-list', 'ordered-list', '|', 'link', 'image', '|', 'preview', 'side-by-side', 'fullscreen'],
+        status: false,
+      });
+    }
+
+    // ── Pages CRUD (localStorage for now — swap with API later) ─────────
+    function savePages() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pages));
+    }
+
+    function renderPagesList() {
+      if (pages.length === 0) {
+        pagesList.innerHTML = `<p class="text-stone-500 text-sm">No pages yet. Click “New Page” to create one.</p>`;
+        return;
+      }
+      pagesList.innerHTML = pages.map(p => `
+        <div class="bg-white rounded-xl border border-stone-200 p-4 flex items-center justify-between gap-4">
+          <div>
+            <div class="font-display font-bold text-lg text-renegade-green">${escapeHtml(p.title || 'Untitled')}</div>
+            <div class="text-xs text-stone-500">/${escapeHtml(p.slug || '')} · ${p.published ? '<span class="text-green-600">Published</span>' : '<span class="text-amber-600">Draft</span>'} ${p.showInNav ? '· In Nav' : ''}</div>
+          </div>
+          <button onclick="editPage('${p.id}')" class="text-xs font-semibold uppercase tracking-wider text-renegade-gold hover:underline">Edit</button>
+        </div>
+      `).join('');
+    }
+
+    function openEditor(page = null) {
+      editingId = page ? page.id : null;
+      document.getElementById('editor-title').textContent = page ? 'Edit Page' : 'New Page';
+      document.getElementById('page-title').value = page?.title || '';
+      document.getElementById('page-slug').value = page?.slug || '';
+      document.getElementById('show-in-nav').checked = !!page?.showInNav;
+      document.getElementById('delete-btn').classList.toggle('hidden', !page);
+
+      editorPanel.classList.remove('hidden');
+      initEditor();
+      if (easyMDE) easyMDE.value(page?.content || '');
+      editorPanel.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    window.editPage = (id) => {
+      const page = pages.find(p => p.id === id);
+      if (page) openEditor(page);
+    };
+
+    document.getElementById('new-page-btn').addEventListener('click', () => openEditor());
+    document.getElementById('close-editor').addEventListener('click', () => {
+      editorPanel.classList.add('hidden');
+      if (easyMDE) easyMDE.toTextArea();
+    });
+
+    function getFormData() {
+      return {
+        title: document.getElementById('page-title').value.trim(),
+        slug: document.getElementById('page-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'),
+        content: easyMDE ? easyMDE.value() : '',
+        showInNav: document.getElementById('show-in-nav').checked,
+      };
+    }
+
+    document.getElementById('save-draft-btn').addEventListener('click', () => savePage(false));
+    document.getElementById('publish-btn').addEventListener('click', () => savePage(true));
+
+    function savePage(published) {
+      const data = getFormData();
+      if (!data.title || !data.slug) {
+        alert('Title and slug are required.');
+        return;
+      }
+      if (editingId) {
+        const idx = pages.findIndex(p => p.id === editingId);
+        pages[idx] = { ...pages[idx], ...data, published, updatedAt: new Date().toISOString() };
+      } else {
+        pages.push({
+          id: crypto.randomUUID(),
+          ...data,
+          published,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      savePages();
+      renderPagesList();
+      editorPanel.classList.add('hidden');
+      if (easyMDE) easyMDE.toTextArea();
+    }
+
+    document.getElementById('delete-btn').addEventListener('click', () => {
+      if (!editingId || !confirm('Delete this page permanently?')) return;
+      pages = pages.filter(p => p.id !== editingId);
+      savePages();
+      renderPagesList();
+      editorPanel.classList.add('hidden');
+    });
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, m => ({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[m]));
+    }
+
+    // ── Init ────────────────────────────────────────────────────────────
+    if (isLoggedIn()) showDashboard();
+  </script>
+</body>
+</html>
