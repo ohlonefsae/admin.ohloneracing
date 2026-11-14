@@ -1,16 +1,13 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "renegades-site",
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "renegades-admin",
   "compatibility_date": "2026-11-01",
-  "pages_build_output_dir": "./",
+  "pages_build_output_dir": ".",
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "renegades-db",
       "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"
     }
-  ],
-  "vars": {
-    "ADMIN_PASSWORD": "REPLACE_WITH_A_STRONG_PASSWORD"
-  }
+  ]
 }
