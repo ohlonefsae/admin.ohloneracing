@@ -4,13 +4,13 @@ export async function onRequestGet(context) {
 
   try {
     const { results } = await env.DB.prepare(
-      `SELECT id, slug, title, updated_at FROM pages WHERE published = 1 ORDER BY created_at DESC`
+      `SELECT slug, title, updated_at FROM pages WHERE published = 1 ORDER BY created_at DESC`
     ).all();
 
     return new Response(JSON.stringify(results), {
       headers: { 
         'Content-Type': 'application/json; charset=utf-8',
-        'Access-Control-Allow-Origin': '*' // Allows your main site to fetch from admin subdomain
+        'Access-Control-Allow-Origin': '*' // Allows main site to fetch from admin subdomain
       },
     });
   } catch (err) {
