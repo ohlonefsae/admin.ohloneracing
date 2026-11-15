@@ -1,11 +1,22 @@
 // functions/api/pages/public.js
 export async function onRequestGet(context) {
   const { env } = context;
-  const { results } = await env.DB.prepare(
-    `SELECT slug, title FROM pages WHERE published = 1 AND show_in_nav = 1 ORDER BY title`
-  ).all();
 
-  return new Response(JSON.stringify(results || []), {
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-  });
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT id, slug, title, updated_at FROM pages WHERE published = 1 ORDER BY created_at DESC`
+    ).all();
+
+    return new Response(JSON.stringify(results), {
+      headers: { 
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': '*' // Allows your main site to fetch from admin subdomain
+      },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }
