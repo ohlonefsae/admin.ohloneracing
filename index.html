@@ -208,10 +208,20 @@
       editorPanel.scrollIntoView({ behavior: 'smooth' });
     }
 
+// Fetch the full individual page content including markdown when Edit is clicked
     window.editPage = async (id) => {
-      // For simplicity we re-fetch full content; extend API if needed
-      const page = pages.find(p => p.id === id);
-      if (page) openEditor(page);
+      try {
+        const res = await fetch(`${API}/pages/${id}`, { credentials: 'include' });
+        if (res.ok) {
+          const page = await res.json();
+          openEditor(page);
+        } else {
+          alert('Failed to load page content.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error connecting to server.');
+      }
     };
 
     document.getElementById('new-page-btn').addEventListener('click', () => openEditor());
@@ -240,19 +250,25 @@
       const method = editingId ? 'PUT' : 'POST';
       const url = editingId ? `${API}/pages/${editingId}` : `${API}/pages`;
 
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-        credentials: 'include',
-      });
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+          credentials: 'include',
+        });
 
-      if (res.ok) {
-        await loadPages();
-        editorPanel.classList.add('hidden');
-        if (easyMDE) easyMDE.toTextArea();
-      } else {
-        alert('Save failed');
+        if (res.ok) {
+          await loadPages();
+          editorPanel.classList.add('hidden');
+          if (easyMDE) easyMDE.toTextArea();
+        } else {
+          const errorData = await res.json().catch(() => ({}));
+          alert(errorData.error || 'Save failed. Please check your inputs.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Network error while saving page.');
       }
     }
 
@@ -261,10 +277,18 @@
 
     document.getElementById('delete-btn').addEventListener('click', async () => {
       if (!editingId || !confirm('Delete this page permanently?')) return;
-      const res = await fetch(`${API}/pages/${editingId}`, { method: 'DELETE', credentials: 'include' });
-      if (res.ok) {
-        await loadPages();
-        editorPanel.classList.add('hidden');
+      try {
+        const res = await fetch(`${API}/pages/${editingId}`, { method: 'DELETE', credentials: 'include' });
+        if (res.ok) {
+          await loadPages();
+          editorPanel.classList.add('hidden');
+          if (easyMDE) easyMDE.toTextArea();
+        } else {
+          alert('Delete failed.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Network error while deleting page.');
       }
     });
 
