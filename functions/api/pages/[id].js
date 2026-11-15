@@ -1,45 +1,53 @@
 // functions/api/pages/[id].js
-async function requireAuth(request) {
-  const cookie = request.headers.get('Cookie') || '';
-  return cookie.includes('admin_token=');
+
+// Handle CORS preflight requests
+export async function onRequestOptions() {
+  return new Response(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }
 
-export async function onRequestPut(context) {
-  const { request, env, params } = context;
-  if (!(await requireAuth(request))) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-  }
+// Handle GET requests for a single page
+export async function onRequestGet(context) {
+  const { env, params } = context;
+  const idOrSlug = params.id; // Cloudflare names the dynamic parameter file [id].js -> params.id
 
-  const body = await request.json();
-  const now = new Date().toISOString();
-
-  await env.DB.prepare(
-    `UPDATE pages SET slug = ?, title = ?, content_md = ?, published = ?, show_in_nav = ?, updated_at = ? WHERE id = ?`
-  )
-    .bind(
-      body.slug,
-      body.title,
-      body.content_md || '',
-      body.published ? 1 : 0,
-      body.show_in_nav ? 1 : 0,
-      now,
-      params.id
+  try {
+    // Query D1 database by ID or Slug
+    const page = await env.DB.prepare(
+      `SELECT * FROM pages WHERE (id = ? OR slug = ?) AND published = 1`
     )
-    .run();
+      .bind(idOrSlug, idOrSlug)
+      .first();
 
-  return new Response(JSON.stringify({ ok: true }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+    if (!page) {
+      return new Response(JSON.stringify({ error: 'Page not found' }), {
+        status: 404,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*' 
+        },
+      });
+    }
 
-export async function onRequestDelete(context) {
-  const { request, env, params } = context;
-  if (!(await requireAuth(request))) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    return new Response(JSON.stringify(page), {
+      headers: { 
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': '*' 
+      },
+    });
+
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*' 
+      },
+    });
   }
-
-  await env.DB.prepare(`DELETE FROM pages WHERE id = ?`).bind(params.id).run();
-  return new Response(JSON.stringify({ ok: true }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
 }
